@@ -1,3 +1,4 @@
+import re
 from token import Token, TokenType
 
 class Scanner:
@@ -7,19 +8,20 @@ class Scanner:
         self.start = 0
         self.curr = 0
         self.line = 0
-        self.punctuation = '[]{}();,.+-*'
     
     # scans the entire source
     def scan(self):
         # check for EOF
         while self.line < len(self.source):
-            self.scan_next()
-            # set type to t, value to v, lex to start:curr, loc to self.start
-            self.tokens.append(Token(t, v, self.source[self.line][self.start:self.curr + 1], self.start))
+            lex = self.scan_lex()
             self.start = self.curr
         self.tokens.append(Token(TokenType.EOF, None, None, None))
     # scans the next token
-    def scan_next(self): # returns type and value
+    def scan_lex(self): # returns lex
         self.curr += 1
-        # check for EOL, line++
-        # check for each type of token
+        lex = self.source[self.line][self.start:self.curr]
+        if lex in self.punctuation:
+            return lex
+        # check identifiers and keywords
+        elif re.search(r'[a-zA-Z_][a-zA-Z0-9_]*', lex):
+            pass
