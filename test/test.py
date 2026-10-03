@@ -1,3 +1,4 @@
+## start AI code
 import re
 import subprocess
 import sys
@@ -147,7 +148,7 @@ class ScannerTokenTests(unittest.TestCase):
 			scan_token_types("first\nsecond"),
 			["IDENTIFIER", "EOL", "IDENTIFIER", "EOL", "EOF"],
 		)
-
+# end AI code (lots of this was tweaked heavily)
 
 class ScannerErrorTests(unittest.TestCase):
 	def assert_scanner_error(self, source, expected_message):
