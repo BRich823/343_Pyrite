@@ -1,0 +1,74 @@
+------
+Pyrite
+By: Brody Richards
+------
+
+Number Literal:
+    int or float
+    int : [0-9]+
+    float : [0-9]+.[0-9]+
+
+String Literal:
+    str : ^["]([^"]*)["]
+
+Identifier:
+    id : ^[a-zA-Z_][a-zA-Z0-9_]*
+
+Design choices are very similar to lox, but may branch as we continue.
+Nil == Null
+Int and Float
+
+Dependencies:
+    - Token
+    - Scanner
+(also used struct and re libraries)
+Setup:
+    Repl:
+        python src/pyrite.py
+    File:
+        python src/pyrite.py [file]
+    Test:
+        python test/test.py
+Tests:
+    - Every keyword token
+        - [and, class, else, false, for, fun, if, nil, or, print, return, super, this, true, var, while]
+        - [AND, CLASS, ELSE, FALSE, FOR, FUN, IF, NULL, OR, PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE]
+    - Identifier start and continuation rules
+        - [name, _hidden, item7, camelCase, a_b_2]
+        - [IDENTIFIER, IDENTIFIER, IDENTIFIER, IDENTIFIER, IDENTIFIER]
+    - Keyword prefix is an identifier
+        - [variable, printable, while2]
+        - [IDENTIFIER, IDENTIFIER, IDENTIFIER]
+    - Integer literals
+        - [0, 7, 2048]
+        - [INT, INT, INT]
+    - Float literals
+        - [0.5, 3.14, 10.0]
+        - [FLOAT, FLOAT, FLOAT]
+    - Quoted string literals
+        - ["hello", "world"]
+        - [STR, STR]
+    - Literal at end of line
+        - [42]
+        - [INT]
+    - Every punctuator token
+        - [(=), ), =, =, =, ,, :, :, ;, ., +, -, *, !, !=]
+        - [LPAREN, RPAREN, EQUAL, EQUAL, EQUAL, COMMA, COLON, COLON, SEMICOLON, DOT, PLUS, MINUS, STAR, BANG, BANG_EQUAL]
+    - Tokens are separated by whitespace
+        - [var total = 12]
+        - [VAR, IDENTIFIER, EQUAL, INT, EOL, EOF]
+    - Each source line ends with eol
+        - [first, second]
+        - [IDENTIFIER, EOL, IDENTIFIER, EOL, EOF]
+    - Each source line ends with eol
+        - [first, second]
+        - [IDENTIFIER, EOL, IDENTIFIER, EOL, EOF]
+Errors:
+    - ScannerError
+        ScannerError
+    - Unexpected character
+        Unexpected character '@' at line 2, column 3
+    - Unterminated string
+        Unterminated string at line 2, column 3
+    - EOF
+        REPL terminated at line 1, column 1

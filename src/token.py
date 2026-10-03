@@ -1,8 +1,8 @@
 class TokenType:
     # (pyr, py)
-    Literal = {'str': 'STR', 'int': 'INT', 'bool': 'BOOL'}
+    Literal = {'str': 'STR', 'int': 'INT', 'float': 'FLOAT'}
     Identifier = 'IDENTIFIER'
-    Keywords = {
+    Keyword = {
         "and": "AND",
         "class": "CLASS",
         "else": "ELSE",
@@ -20,7 +20,7 @@ class TokenType:
         "var": "VAR",
         "while": "WHILE",
     }
-    Punctuators = {
+    Punctuator = {
         'singles': {
             '(': "LPAREN",
             ')': "RPAREN",
@@ -49,6 +49,8 @@ class TokenType:
             '//': "SLASH_SLASH",
             }    
         }
+    Eof = 'EOF'
+    Eol = 'EOL'
     
 class Token:
     def __init__(self, type, lex=None, loc=None, value=None):
@@ -63,10 +65,38 @@ class Token:
     def __convert__(self):
         # token type to value/better type
         pass
+
+class Literal(Token):
+    def __init__(self, lex, loc):
+        # try to convert to int/float/str
+        try:
+            v = int(lex)
+            t = 'int'
+        except ValueError:
+            try:
+                v = float(lex)
+                t = 'float'
+            except ValueError:
+                v = lex
+                t = 'str'
+        super().__init__(TokenType.Literal[t], lex, loc, v)
     
+class Identifier(Token):
+    def __init__(self, lex, loc):
+        super().__init__(TokenType.Identifier, lex, loc)
+
+class Keyword(Token):
+    def __init__(self, lex, loc):
+        super().__init__(TokenType.Keyword[lex], lex, loc)
+
+class Punctuator(Token):
+    def __init__(self, lex, loc):
+        i = 'singles' if lex in TokenType.Punctuator['singles'] else 'doubles'
+        super().__init__(TokenType.Punctuator[i][lex], lex, loc)
+                
 if __name__ == "__main__":
     # test token class
-    t = Token(TokenType.Literal['int'], '123', (1, 1))
+    t = Literal('123.0', (1, 1))
     print(t)
     lex = ')'
-    print(Token(TokenType.Punctuators['singles'][lex], lex, (1, 1)))
+    print(Punctuator(lex, (1, 1)))
