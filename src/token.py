@@ -62,6 +62,9 @@ class Token:
     def __repr__(self):
         return f'Token({self.type}, {repr(self.value)}, {repr(self.lex)}, {repr(self.loc)})'
 
+    def __str__(self):
+        return f'{self.lex}'
+    
     def __convert__(self):
         # token type to value/better type
         pass

@@ -1,0 +1,65 @@
+------
+Pyrite
+By: Brody Richards
+------
+
+expression → literal
+           | unary
+           | binary
+           | group
+           
+literal    → INT | FLOAT | STRING | "true" | "false" | "null" 
+
+grouping   → "(" expression ")" 
+
+unary      → ( "-" | "!" ) expression 
+
+binary     → expression operator expression 
+
+operator   → "==" | "!=" | "<" | "<=" | ">" | ">="
+            | "+" | "-" | "*" | "/" 
+
+literal holds all tokens with type literal, as well as keywords 'true' and 'false'
+since they represent literal boolean vals, and null represent the literal nothing.
+All operators are found in punctuator, but are either in singles or doubles.
+These lists could be combined for simplicities sake in the future
+AST.py can be ran for the example found in the slides.
+ast_test.py under test/lab2 can be ran to test 3 hardcoded examples.
+-binary of unary and grouping
+        Binary(
+            Unary(Punctuator('-', 1), Literal(376)),
+            Punctuator('+', 1),
+            Grouping(Literal(2.3)),
+        )
+    designed to test a basic expr similar to the example in the slides
+    expected output: (+ (- 376) (group 2.3))
+-nested binary expression
+        Binary(
+            Grouping(
+                Binary(
+                    Literal(2),
+                    Punctuator('+', 1),
+                    Literal(3),
+                )
+            ),
+            Punctuator('*', 1),
+            Unary(Punctuator('-', 1), Literal(4)),
+        )
+    designed to test a nested binary expression
+    expected output: (* (group (+ 2 3)) (- 4))
+-unary then binary then grouping
+        Binary(
+            Unary(Punctuator('-', 1), Literal(10)),
+            Punctuator('*', 1),
+            Grouping(
+                Binary(
+                    Literal(5),
+                    Punctuator('-', 1),
+                    Literal(2),
+                )
+            ),
+        )
+    designed to test a unary expression then a binary expression then a grouping
+    expected output: (* (- 10) (group (- 5 2)))
+
+    All tests pass with the expected output
