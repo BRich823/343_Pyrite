@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m unittest test/lab2/parser_error_test.py -v)"
+    ]
+  }
+}

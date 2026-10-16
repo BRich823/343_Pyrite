@@ -56,6 +56,22 @@ class Literal(Expression):
     def __str__(self):
         return str(self.value)
     
+class ASTPrinter:
+    def print(self, expr):
+        return self._visit(expr)
+
+    def _visit(self, expr):
+        if isinstance(expr, Binary):
+            return f"({expr.op} {self._visit(expr.left)} {self._visit(expr.right)})"
+        if isinstance(expr, Unary):
+            return f"({expr.op} {self._visit(expr.right)})"
+        if isinstance(expr, Grouping):
+            return f"(group {self._visit(expr.exp)})"
+        if isinstance(expr, Literal):
+            return str(expr.value)
+        raise ValueError(f"Unknown expression type: {type(expr).__name__}")
+
+
 if __name__ == "__main__":
     exp = Binary(
         Unary(Punctuator('-', 1), Literal(123)),

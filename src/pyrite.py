@@ -1,34 +1,49 @@
 import sys
-from scanner import Scanner, Error
+from scanner import Scanner, ScannerError
+from parser import Parser, ParseError
+from ast import ASTPrinter
+
+_printer = ASTPrinter()
+
+
+def run(source):
+    s = Scanner(source)
+    try:
+        s.scan()
+    except ScannerError as e:
+        print(f"Scan error: {e}")
+        return
+
+    try:
+        ast = Parser(s.tokens).parse()
+        print(_printer.print(ast))
+    except ParseError as e:
+        print(f"Parse error: {e}")
+
 
 def main():
-	args = sys.argv[1:]
-	s = Scanner(args[0] if len(args) == 1 else [])
-	if len(args) == 0:
-		print("entering REPL")
-		try:
-			while True:
-				s.add_line(input(">>> "))
-				s.print_tokens()
-		except (KeyboardInterrupt, EOFError) as cause:
-			try:
-				raise Error("REPL terminated", s.get_loc()) from cause
-			except Error as e:
-				print(e)
-		except Error as e:
-			print(e)
+    args = sys.argv[1:]
 
-	elif len(args) == 1:
-		try:
-			with open(args[0], 'r') as f:
-				s.set_source(f.read())
-			s.print_tokens()
-		except Error as e:
-			print(e)
-	else:
-		print("Usage: python src/pyrite.py or python src/pyrite.py [file]")
+    if len(args) == 0:
+        print("entering REPL")
+        try:
+            while True:
+                line = input(">>> ")
+                if line.strip():
+                    run(line)
+        except (KeyboardInterrupt, EOFError):
+            print()
+
+    elif len(args) == 1:
+        try:
+            with open(args[0], 'r') as f:
+                run(f.read())
+        except OSError as e:
+            print(e)
+
+    else:
+        print("Usage: python src/pyrite.py or python src/pyrite.py [file]")
 
 
 if __name__ == "__main__":
-	main()
-
+    main()
