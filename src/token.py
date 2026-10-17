@@ -57,7 +57,7 @@ class Token:
         self.type = type
         self.lex = lex
         self.loc = loc # tuple of (line, col)
-        self.value = value if value else self.__convert__()
+        self.value = value if value is not None else self.__convert__()
         
     def __repr__(self):
         return f'Token({self.type}, {repr(self.value)}, {repr(self.lex)}, {repr(self.loc)})'

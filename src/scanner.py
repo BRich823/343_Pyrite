@@ -1,5 +1,3 @@
-import re
-from struct import unpack
 from token import Punctuator, Keyword, Identifier, Literal, TokenType, Token
 
 class ScannerError(Exception):

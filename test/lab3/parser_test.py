@@ -106,6 +106,78 @@ class SyntaxErrorTests(unittest.TestCase):
 
     def test_deeply_nested_unclosed(self):
         assert_parse_error(self, "(((1 + 2)")
+
+
+def assert_parses(test, src, expected):
+    test.assertEqual(str(parse(src)), expected, msg=f"Wrong tree for: {src!r}")
+
+
+class LiteralTests(unittest.TestCase):
+    def test_int(self):
+        assert_parses(self, "42", "42")
+
+    def test_float(self):
+        assert_parses(self, "3.5", "3.5")
+
+    def test_string(self):
+        assert_parses(self, '"hi"', '"hi"')
+
+    def test_true(self):
+        assert_parses(self, "true", "True")
+
+    def test_false(self):
+        assert_parses(self, "false", "False")
+
+    def test_nil(self):
+        assert_parses(self, "nil", "None")
+
+
+class UnaryTests(unittest.TestCase):
+    def test_negate(self):
+        assert_parses(self, "-5", "(- 5)")
+
+    def test_not(self):
+        assert_parses(self, "!true", "(! True)")
+
+    def test_double_not(self):
+        assert_parses(self, "!!false", "(! (! False))")
+
+    def test_negate_grouping(self):
+        assert_parses(self, "-(1 + 2)", "(- (group (+ 1 2)))")
+
+
+class BinaryTests(unittest.TestCase):
+    def test_addition(self):
+        assert_parses(self, "1 + 2", "(+ 1 2)")
+
+    def test_division(self):
+        assert_parses(self, "3.5 / 2", "(/ 3.5 2)")
+
+    def test_comparison(self):
+        assert_parses(self, "1 >= 2", "(>= 1 2)")
+
+    def test_inequality(self):
+        assert_parses(self, "false != true", "(!= False True)")
+
+
+class PrecedenceTests(unittest.TestCase):
+    def test_factor_before_term(self):
+        assert_parses(self, "1 + 2 * 3", "(+ 1 (* 2 3))")
+
+    def test_grouping_overrides_precedence(self):
+        assert_parses(self, "(1 + 2) * 3", "(* (group (+ 1 2)) 3)")
+
+    def test_left_associative(self):
+        assert_parses(self, "1 - 2 - 3", "(- (- 1 2) 3)")
+
+    def test_comparison_before_equality(self):
+        assert_parses(self, "1 < 2 == true", "(== (< 1 2) True)")
+
+    def test_unary_before_factor(self):
+        assert_parses(self, "-2 * 3", "(* (- 2) 3)")
+
+    def test_mixed(self):
+        assert_parses(self, "-1 + 2 * (3 - 4) > 0", "(> (+ (- 1) (* 2 (group (- 3 4)))) 0)")
 # end AI code
 
 if __name__ == "__main__":

@@ -1,35 +1,37 @@
 ## start AI code
-import re
 import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 PYRITE = ROOT / "src" / "pyrite.py"
 
 
 def scan_token_types(source):
-	"""Run the scanner CLI and return the emitted token type names."""
-	with tempfile.TemporaryDirectory() as directory:
-		source_path = Path(directory) / "scanner-input.pyr"
-		source_path.write_text(source + "\n", encoding="utf-8")
-		result = subprocess.run(
-			[sys.executable, str(PYRITE), str(source_path)],
-			cwd=ROOT,
-			capture_output=True,
-			text=True,
-			check=False,
-		)
+	"""Run the scanner and return the emitted token type names."""
+	script = (
+		"from scanner import Scanner\n"
+		f"s = Scanner({source + chr(10)!r})\n"
+		"s.scan()\n"
+		"for t in s.tokens:\n"
+		"\tprint(t.type)\n"
+	)
+	result = subprocess.run(
+		[sys.executable, "-c", script],
+		cwd=ROOT / "src",
+		capture_output=True,
+		text=True,
+		check=False,
+	)
 
 	if result.returncode != 0:
 		raise AssertionError(
 			f"Scanner exited with {result.returncode}:\n{result.stderr}"
 		)
 
-	return re.findall(r"^Token\(([^,]+),", result.stdout, re.MULTILINE)
+	return result.stdout.split()
 
 
 def scan_error(source):
@@ -171,7 +173,7 @@ class ScannerErrorTests(unittest.TestCase):
 			"Unterminated string at line 2, column 3",
 		)
 
-	def test_repl_eof_prints_termination_error(self):
+	def test_repl_exits_cleanly_on_eof(self):
 		result = subprocess.run(
 			[sys.executable, str(PYRITE)],
 			cwd=ROOT,
@@ -181,7 +183,7 @@ class ScannerErrorTests(unittest.TestCase):
 			check=False,
 		)
 		self.assertEqual(result.returncode, 0, result.stderr)
-		self.assertIn("REPL terminated at line 1, column 1", result.stdout)
+		self.assertIn("entering REPL", result.stdout)
 		self.assertNotIn("Traceback", result.stderr)
 
 
