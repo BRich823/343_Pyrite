@@ -1,7 +1,8 @@
 import sys
 from scanner import Scanner, ScannerError
-from parser import Parser, ParseError
+from parser import Parser
 from ast import ASTPrinter
+from evaluator import Statement
 
 _printer = ASTPrinter()
 
@@ -14,11 +15,16 @@ def run(source):
         print(f"Scan error: {e}")
         return
 
-    try:
-        ast = Parser(s.tokens).parse()
-        print(_printer.print(ast))
-    except ParseError as e:
-        print(f"Parse error: {e}")
+    parser = Parser(s.tokens)
+    statements = parser.parse_program()
+    if parser.errors:
+        for e in parser.errors:
+            print(f"Parse error: {e}")
+        return
+
+    for stmt in statements:
+        kind = 'print' if stmt.statement_type == Statement.Type.PRINT else 'expr'
+        print(f"({kind} {_printer.print(stmt.content)})")
 
 
 def main():

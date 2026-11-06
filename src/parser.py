@@ -1,5 +1,6 @@
 from token import TokenType
 from ast import Binary, Unary, Grouping, Literal
+from evaluator import Statement
 
 
 class ParseError(Exception):
@@ -19,12 +20,46 @@ class Parser:
         # Strip EOL tokens; keep EOF
         self.tokens = [t for t in tokens if t.type != TokenType.Eol]
         self.curr = 0
+        self.errors = []
 
 
     def parse(self):
         expr = self.expression()
         self.consume(TokenType.Eof, "Expected end of expression")
         return expr
+
+    # program -> statement* EOF
+    # Syntax errors are recorded in self.errors; the parser then
+    # synchronizes and keeps going with the next statement.
+    def parse_program(self):
+        statements = []
+        while not self.is_at_end():
+            try:
+                statements.append(self.statement())
+            except ParseError as e:
+                self.errors.append(e)
+                self.synchronize()
+        return statements
+
+    # --- statements ---
+
+    # statement -> exprStmt | printStmt
+    def statement(self):
+        if self.match('PRINT'):
+            return self.print_statement()
+        return self.expression_statement()
+
+    # printStmt -> "print" expression ";"
+    def print_statement(self):
+        expr = self.expression()
+        self.consume('SEMICOLON', "Expected ';' after value")
+        return Statement(Statement.Type.PRINT, expr)
+
+    # exprStmt -> expression ";"
+    def expression_statement(self):
+        expr = self.expression()
+        self.consume('SEMICOLON', "Expected ';' after expression")
+        return Statement(Statement.Type.EXPRESSION, expr)
 
     # --- grammar rules (lowest to highest precedence) ---
 
@@ -84,6 +119,19 @@ class Parser:
             return Grouping(expr)
 
         raise ParseError("Expected expression", self.peek())
+
+    # --- error recovery ---
+
+    # Panic mode: discard tokens until we reach a likely statement boundary
+    def synchronize(self):
+        self.advance()
+        while not self.is_at_end():
+            if self.previous().type == 'SEMICOLON':
+                return
+            if self.peek().type in ('CLASS', 'FUN', 'VAR', 'FOR', 'IF',
+                                    'WHILE', 'PRINT', 'RETURN'):
+                return
+            self.advance()
 
     # --- helpers ---
 

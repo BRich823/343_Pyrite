@@ -34,8 +34,10 @@ class Scanner:
                     self.start = self.curr
                     continue
 
+                # record where the token starts before scan_lex moves past it
+                loc = (self.line, self.curr)
                 token_type, lex = self.scan_lex()
-                self.add_token(lex, token_type)
+                self.add_token(lex, token_type, loc)
 
             self.add_token(None, 'eol')
             self.line += 1
@@ -111,8 +113,9 @@ class Scanner:
 
         raise ScannerError(f"Unexpected character {ch!r}", self.get_loc())
 
-    def add_token(self, lex, type):
-        loc = self.get_loc()
+    def add_token(self, lex, type, loc=None):
+        if loc is None:
+            loc = self.get_loc()
         typeToToken = {
             'lit': lambda: Literal(lex, loc),
             'id': lambda: Identifier(lex, loc),

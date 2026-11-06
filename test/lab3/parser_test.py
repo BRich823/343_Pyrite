@@ -23,6 +23,9 @@ sys.modules["token"] = token_mod
 ast_mod = load_module("ast", "ast.py")
 sys.modules["ast"] = ast_mod
 
+evaluator_mod = load_module("evaluator", "evaluator.py")
+sys.modules["evaluator"] = evaluator_mod
+
 scanner_mod = load_module("pyrite_scanner", "scanner.py")
 parser_mod  = load_module("pyrite_parser",  "parser.py")
 

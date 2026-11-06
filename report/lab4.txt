@@ -1,0 +1,86 @@
+------
+Pyrite
+By: Brody Richards
+------
+
+My statement grammar is as follows:
+
+program       → statement* EOF
+
+statement     → exprStmt
+              | printStmt
+
+exprStmt      → expression ";"
+
+printStmt     → "print" expression ";"
+
+The expression grammar from lab 3 is unchanged:
+
+expression → literal
+           | unary
+           | binary
+           | group
+
+literal    → INT | FLOAT | STRING | "true" | "false" | "null"
+
+grouping   → "(" expression ")"
+
+unary      → ( "-" | "!" ) expression
+
+binary     → expression operator expression
+
+operator   → "==" | "!=" | "<" | "<=" | ">" | ">="
+           | "+" | "-" | "*" | "/"
+
+
+Design changes:
+The parser has a new entry point, parse_program(), which follows the program rule
+and returns a list of Statement objects. The old parse() is still there for parsing a
+single expression, so the lab 3 tests still work.
+
+I added panic mode error recovery. When a syntax error happens inside a statement,
+the parser saves the error, then skips tokens until it reaches a ';' or keyword
+that starts a new statement (print, var, if, while, etc.), and keeps parsing from there.
+
+Dependencies and Setup:
+No dependencies outside of the standard library.
+The scanner, parser, and Statement classes are in the src folder.
+To run the program, run the pyrite.py file alone or with a file
+
+python src/pyrite.py
+
+or
+
+python src/pyrite.py [file]
+
+Test files can be ran using:
+
+python test/lab4/statement_test.py
+
+Tests:
+There are 2 tests in total, one for invalid statements and one for valid statements
+
+test_invalid_statements:
+    "one"
+    true;
+    print 2 +
+    expected: no statements and 2 ParseErrors
+        "Expected ';' after expression" (the missing ';' after "one")
+        "Expected expression" (print 2 + has no right operand)
+    This tests panic mode. Before error recovery, the parser stopped at the first
+    error. Now it recovers at the ';' after true and also catches the error in print 2 +.
+
+test_valid_statements:
+    4 + 2;
+    print "one";
+    print true;
+    print 1 + 2;
+    print nil;
+    expected: no errors and 5 statements
+        EXPRESSION, (+ 4 2)
+        PRINT, "one"
+        PRINT, True
+        PRINT, (+ 1 2)
+        PRINT, None
+
+All tests pass (as well as previous tests)
