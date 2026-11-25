@@ -3,7 +3,8 @@ Pyrite
 By: Brody Richards
 ------
 
-My grammar now includes declarations, blocks, and assignment:
+This is my biggest addition to my language so far. I added declarations, blocks, assignments, and typing to my grammar.
+This follows roughly the same rules as typescript typing and declarations which allows for strict variables.
 
 program       → declaration* EOF
 
