@@ -1,0 +1,273 @@
+------
+Pyrite
+By: Brody Richards
+------
+
+My grammar now includes declarations, blocks, and assignment:
+
+program       → declaration* EOF
+
+declaration   → varDecl | letDecl | constDecl | statement
+
+varDecl       → "var" IDENTIFIER ( ":" type )? ( "=" expression )? ";"
+
+letDecl       → "let" IDENTIFIER ( ":" type )? ( "=" expression )? ";"
+
+constDecl     → "const" IDENTIFIER ( ":" type )? "=" expression ";"
+
+type          → "number" | "string" | "boolean" | "nil" | "any"
+
+statement     → exprStmt
+              | printStmt
+              | block
+
+block         → "{" declaration* "}"
+
+exprStmt      → expression ";"
+
+printStmt     → "print" expression ";"
+
+expression    → assignment
+
+assignment    → IDENTIFIER "=" assignment | equality
+
+The rest of the expression grammar is the same as lab 3, with IDENTIFIER added as a
+primary expression for variable access.
+
+
+Design changes:
+There are three kinds of variables, each its own class in variables.py:
+- var is untyped (any) unless it has a type annotation.
+- let is strict. Its type comes from the annotation, or is inferred from the
+  initializer if there is no annotation.
+- const is strict like let, but it must be initialized and can't be assigned again.
+
+Scoping is handled by the Environment class. Each block gets its own Environment that
+points to the enclosing one. A lookup starts at the innermost scope and moves outward,
+so declaring a name in an inner block is prioritized over the outer one. When the block ends its
+Environment is thrown away, its variables are no longer visible.
+
+After parsing, a static checker (checker.py) resolves every name against its scope and
+checks types, a bit like tsc for TypeScript. It collects all errors before reporting,
+so one run can show several errors. Errors are grouped as Parse errors, Variable errors,
+and Type errors, and each includes the line and column.
+
+The program doesn't execute yet. If the checker finds no errors, pyrite.py prints each
+statement as an AST. Declarations print as (keyword name: type initializer). The
+": type" only shows for annotated or strict (let/const) variables.
+
+Dependencies and Setup:
+No dependencies outside of the standard library.
+The scanner, parser, checker, and variable classes are in the src folder.
+To run the program, run the pyrite.py file alone or with a file
+
+python src/pyrite.py
+
+or
+
+python src/pyrite.py [file]
+
+In the REPL, declarations persist between lines.
+
+Test files can be ran using:
+
+python test/lab5/variable_test.py
+
+
+Variables and their features:
+
+Declaration
+    var a;
+    var b = 1;
+    var s: string = "hi";
+    let n = 2.5;
+    let flag: boolean = true;
+    const PI = 3.14;
+    const name: string = "pyrite";
+    var x: any = nil;
+    output:
+        (var a)
+        (var b 1)
+        (var s: string "hi")
+        (let n: number 2.5)
+        (let flag: boolean True)
+        (const PI: number 3.14)
+        (const name: string "pyrite")
+        (var x: any None)
+    A var with no annotation is "any", so no type is shown. let n and const PI have no
+    annotation, so their type (number) is inferred from the initializer.
+
+Access
+    var a = 1;
+    let b = a + 2;
+    print a;
+    print b * 2;
+    const greeting = "hi " + "there";
+    print greeting;
+    output:
+        (var a 1)
+        (let b: any (+ a 2))
+        (print a)
+        (print (* b 2))
+        (const greeting: string (+ "hi " "there"))
+        (print greeting)
+
+Assignment
+    var a = 1;
+    let b = 2;
+    a = 5;
+    b = a + 1;
+    a = b = 10;
+    var c: any = 1;
+    c = "now a string";
+    print a;
+    output:
+        (var a 1)
+        (let b: number 2)
+        (expr (= a 5))
+        (expr (= b (+ a 1)))
+        (expr (= a (= b 10)))
+        (var c: any 1)
+        (expr (= c "now a string"))
+        (print a)
+    Assignment is right associative, so a = b = 10 parses as a = (b = 10). A var of
+    type any (c) can be given a value of a diff type.
+
+Variable errors
+    print y;              → Variable error: Undefined variable 'y' at line 1, column 7
+    var a = a;            → Variable error: Undefined variable 'a' at line 1, column 9
+                            (the initializer is checked before the name is declared)
+    var a = 1; var a = 2; → Variable error: 'a' is already declared in this scope
+    const PI = 3.14;
+    PI = 3;               → Variable error: Cannot assign to 'PI' because it is a constant
+    const PI;             → Parse error: Expected '=' after constant name, constants must
+                            be initialized
+
+Type errors
+    let n: number = "five";  → Type error: Type 'string' is not assignable to type 'number'
+    let n = 5; n = "five";   → Type error: Type 'string' is not assignable to type 'number'
+    let x;                   → Type error: 'x' needs a type annotation or an initializer
+    print true + 1;          → Type error: Operator '+' cannot be applied to types
+                               'boolean' and 'number'
+
+
+Block scoping:
+
+Shadowing and assigning to an outer variable
+    var a = 1;
+    let b = 2;
+    {
+    var a = "shadow";
+    b = 3;
+    print a;
+    }
+    print a;
+    print b;
+    output:
+        (var a 1)
+        (let b: number 2)
+        (block (var a "shadow") (expr (= b 3)) (print a))
+        (print a)
+        (print b)
+    Inside the block, a is a new variable that shadows the outer a, so it can even have
+    a different type. b is not declared in the block, so the assignment finds and updates
+    the outer b. After the block, a refers to the global a again.
+
+Accessing a variable outside of its scope
+    {
+    var inner = 1;
+    }
+    print inner;
+    output:
+        Variable error: Undefined variable 'inner' at line 4, column 7
+
+Redeclaring in the same block is still an error
+    {
+    let a = 1;
+    const a = 2;
+    }
+    output:
+        Variable error: 'a' is already declared in this scope at line 3, column 7
+
+Constants are still constant inside a nested block
+    const PI = 3.14;
+    {
+    PI = 3;
+    }
+    output:
+        Variable error: Cannot assign to 'PI' because it is a constant at line 3, column 1
+
+
+Scoping example (test/lab5/scoping_example.txt):
+
+var a = "global a";
+var b = "global b";
+var c = "global c";
+{
+var a = "outer a";
+var b = "outer b";
+{
+var a = "inner a";
+print a;
+print b;
+print c;
+}
+print a;
+print b;
+print c;
+}
+print a;
+print b;
+print c;
+
+Running python src/pyrite.py test/lab5/scoping_example.txt gives:
+(var a "global a")
+(var b "global b")
+(var c "global c")
+(block (var a "outer a") (var b "outer b") (block (var a "inner a") (print a) (print b) (print c)) (print a) (print b) (print c))
+(print a)
+(print b)
+(print c)
+
+The checker builds three nested environments: global -> outer block -> inner block.
+Each name resolves by searching outward from the scope it is used in:
+
+  Inside the inner block:
+    a -> "inner a"   (declared in the inner block, shadows outer and global a)
+    b -> "outer b"   (not in inner, found in the outer block)
+    c -> "global c"  (not in inner or outer, found in global)
+
+  Inside the outer block:
+    a -> "outer a"   (the inner scope was thrown away, so "inner a" is gone)
+    b -> "outer b"
+    c -> "global c"
+
+  At the top level:
+    a -> "global a"
+    b -> "global b"
+    c -> "global c"
+
+The test test_resolution walks the program with real Environments and records what
+each print resolves to. The program would print:
+inner a
+outer b
+global c
+outer a
+outer b
+global c
+global a
+global b
+global c
+
+
+Tests:
+There are 84 tests in test/lab5/variable_test.py, grouped by feature:
+    DeclarationTests, AccessTests, AssignmentTests - each variable kind and feature
+    BlockTests          - shadowing, using and assigning outer variables, sibling blocks
+    ReplTests           - declarations and constants persist between REPL lines
+    EnvironmentTests    - declare, get, assign, and lookup through nested scopes
+    VariableTypeTests   - type inference, annotations, and assignability
+    ParseErrorTests, VariableErrorTests, TypeErrorTests, MultipleErrorTests
+    ScopingExampleTests - the AST output and resolved values of the scoping example
+
+All tests pass (as well as previous tests)

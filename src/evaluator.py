@@ -1,7 +1,9 @@
 from enum import Enum
 
-# program       -> statement* EOF 
-# statement     -> exprStmt | printStmt
+# program       -> declaration* EOF
+# declaration   -> varDecl | letDecl | constDecl | statement   (see variables.py)
+# statement     -> exprStmt | printStmt | block
+# block         -> "{" declaration* "}"
 # exprStmt      -> expression ";"
 # printStmt     -> "print" expression ";"
 
@@ -9,6 +11,8 @@ class Statement:
     class Type(Enum):
         EXPRESSION = 0
         PRINT = 1
+        DECLARATION = 2
+        BLOCK = 3
         
     def __init__(self, statement_type, content):
         self.statement_type = statement_type

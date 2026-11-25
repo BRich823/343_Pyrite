@@ -1,11 +1,17 @@
 from token import *
 
 """
-expression → literal
+expression → assignment
+           | variable
+           | literal
            | unary
            | binary
            | group;
            
+assignment → IDENTIFIER "=" expression ;
+
+variable   → IDENTIFIER ;
+
 literal    → INT | FLOAT | STRING | "true" | "false" | "null" ;
 
 grouping   → "(" expression ")" ;
@@ -56,6 +62,21 @@ class Literal(Expression):
     def __str__(self):
         return str(self.value)
     
+class VarAccess(Expression):
+    def __init__(self, name):
+        self.name = name # IDENTIFIER token
+
+    def __str__(self):
+        return str(self.name)
+
+class Assign(Expression):
+    def __init__(self, name, value):
+        self.name = name # IDENTIFIER token
+        self.value = value
+
+    def __str__(self):
+        return f"(= {self.name} {self.value})"
+
 class ASTPrinter:
     def print(self, expr):
         return self._visit(expr)
@@ -69,6 +90,10 @@ class ASTPrinter:
             return f"(group {self._visit(expr.exp)})"
         if isinstance(expr, Literal):
             return str(expr.value)
+        if isinstance(expr, VarAccess):
+            return str(expr.name)
+        if isinstance(expr, Assign):
+            return f"(= {expr.name} {self._visit(expr.value)})"
         raise ValueError(f"Unknown expression type: {type(expr).__name__}")
 
 

@@ -1,6 +1,7 @@
 from token import TokenType
-from ast import Binary, Unary, Grouping, Literal
+from ast import Binary, Unary, Grouping, Literal, VarAccess, Assign
 from evaluator import Statement
+from variables import Variable, Let, Constant, TYPES
 
 
 class ParseError(Exception):
@@ -28,26 +29,82 @@ class Parser:
         self.consume(TokenType.Eof, "Expected end of expression")
         return expr
 
-    # program -> statement* EOF
+    # program -> declaration* EOF
     # Syntax errors are recorded in self.errors; the parser then
     # synchronizes and keeps going with the next statement.
     def parse_program(self):
         statements = []
         while not self.is_at_end():
-            try:
-                statements.append(self.statement())
-            except ParseError as e:
-                self.errors.append(e)
-                self.synchronize()
+            # a '}' here has no matching '{', report it and skip just that token
+            if self.check('RBRACE'):
+                self.errors.append(ParseError("Unmatched '}'", self.advance()))
+                continue
+            self.try_declaration(statements)
         return statements
+
+    # Parses one declaration into statements, recovering on a syntax error
+    def try_declaration(self, statements):
+        try:
+            statements.append(self.declaration())
+        except ParseError as e:
+            self.errors.append(e)
+            self.synchronize()
 
     # --- statements ---
 
-    # statement -> exprStmt | printStmt
+    # declaration -> varDecl | letDecl | constDecl | statement
+    def declaration(self):
+        if self.match('VAR'):
+            return self.variable_declaration(Variable)
+        if self.match('LET'):
+            return self.variable_declaration(Let)
+        if self.match('CONST'):
+            return self.variable_declaration(Constant)
+        return self.statement()
+
+    # varDecl   -> "var" IDENTIFIER ( ":" type )? ( "=" expression )? ";"
+    # letDecl   -> "let" IDENTIFIER ( ":" type )? ( "=" expression )? ";"
+    # constDecl -> "const" IDENTIFIER ( ":" type )? "=" expression ";"
+    def variable_declaration(self, cls):
+        name = self.consume(TokenType.Identifier, f"Expected variable name after '{cls.keyword}'")
+        annotation = None
+        if self.match('COLON'):
+            annotation = self.type_annotation()
+        initializer = None
+        if self.match('EQUAL'):
+            initializer = self.expression()
+        elif cls is Constant:
+            raise ParseError("Expected '=' after constant name, constants must be initialized", self.peek())
+        self.consume('SEMICOLON', f"Expected ';' after {cls.keyword} declaration")
+        return Statement(Statement.Type.DECLARATION, cls(name, initializer, annotation))
+
+    # type -> "number" | "string" | "boolean" | "nil" | "any"
+    def type_annotation(self):
+        if self.match('NULL'):
+            return self.previous()
+        token = self.consume(TokenType.Identifier, "Expected type after ':'")
+        if token.lex not in TYPES:
+            raise ParseError(f"Unknown type '{token.lex}'", token)
+        return token
+
+    # statement -> exprStmt | printStmt | block
     def statement(self):
         if self.match('PRINT'):
             return self.print_statement()
+        if self.match('LBRACE'):
+            return self.block()
         return self.expression_statement()
+
+    # block -> "{" declaration* "}"
+    def block(self):
+        opening = self.previous()
+        statements = []
+        while not self.check('RBRACE') and not self.is_at_end():
+            self.try_declaration(statements)
+        if self.is_at_end():
+            raise ParseError("Unmatched '{', expected '}' to close block", opening)
+        self.advance()
+        return Statement(Statement.Type.BLOCK, statements)
 
     # printStmt -> "print" expression ";"
     def print_statement(self):
@@ -64,7 +121,20 @@ class Parser:
     # --- grammar rules (lowest to highest precedence) ---
 
     def expression(self):
-        return self.equality()
+        return self.assignment()
+
+    # assignment -> IDENTIFIER "=" assignment | equality
+    # Right associative, so a = b = 1 parses as a = (b = 1)
+    def assignment(self):
+        expr = self.equality()
+        if self.match('EQUAL'):
+            equals = self.previous()
+            value = self.assignment()
+            if isinstance(expr, VarAccess):
+                return Assign(expr.name, value)
+            # record without throwing, the parser isn't confused about where it is
+            self.errors.append(ParseError("Invalid assignment target", equals))
+        return expr
 
     def equality(self):
         expr = self.comparison()
@@ -113,6 +183,9 @@ class Parser:
         if self.match('NULL'):
             return Literal(None)
 
+        if self.match(TokenType.Identifier):
+            return VarAccess(self.previous())
+
         if self.match('LPAREN'):
             expr = self.expression()
             self.consume('RPAREN', "Expected ')' after expression")
@@ -123,15 +196,17 @@ class Parser:
     # --- error recovery ---
 
     # Panic mode: discard tokens until we reach a likely statement boundary
+    # A '}' is never skipped, so an error inside a block can't swallow its closing brace
     def synchronize(self):
-        self.advance()
         while not self.is_at_end():
-            if self.previous().type == 'SEMICOLON':
-                return
-            if self.peek().type in ('CLASS', 'FUN', 'VAR', 'FOR', 'IF',
-                                    'WHILE', 'PRINT', 'RETURN'):
+            if self.check('RBRACE'):
                 return
             self.advance()
+            if self.previous().type == 'SEMICOLON':
+                return
+            if self.peek().type in ('CLASS', 'FUN', 'VAR', 'LET', 'CONST', 'FOR', 'IF',
+                                    'WHILE', 'PRINT', 'RETURN', 'LBRACE'):
+                return
 
     # --- helpers ---
 

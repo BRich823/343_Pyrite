@@ -5,11 +5,13 @@ class TokenType:
     Keyword = {
         "and": "AND",
         "class": "CLASS",
+        "const": "CONST",
         "else": "ELSE",
         "false": "FALSE",
         "for": "FOR",
         "fun": "FUN",
         "if": "IF",
+        "let": "LET",
         "nil": "NULL",
         "or": "OR",
         "print": "PRINT",
